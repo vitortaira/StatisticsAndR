@@ -1,0 +1,972 @@
+library(downloader)
+library(dplyr)
+library(gapminder)
+library(rafalib)
+library(swirl)
+library(UsingR)
+
+# 1: Getting started 
+
+# Another way to download the data would be using the downloader package
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
+filename <- "femaleMiceWeights.csv" 
+download(url, destfile=filename)
+
+# We can verify our Random Number Generator settings by:
+RNGkind()
+
+dat <- read.csv("femaleMiceWeights.csv")
+
+# 1.7: Second assessment
+
+set.seed(1)
+sample(13:24,size = 1)
+
+# 1.8: Introduction to dplyr
+
+dat <- read.csv("femaleMiceWeights.csv")
+
+controls <- filter(dat, Diet == "chow")
+
+controls <- dplyr::select(controls, Bodyweight)
+
+# To make sure we are working with numerical vectors, we use:
+
+unlist(controls)
+
+
+# Another way to do the same manipulation would be:
+
+dat <- read.csv("femaleMiceWeights.csv")
+
+controls_1 <- filter(dat, Diet == "chow") %>% dplyr::select(Bodyweight) %>% unlist
+
+identical(controls, controls_1)
+
+# 1.9: dplyr exercises
+
+url="https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/msleep_ggplot2.csv"
+filename <- basename(url)
+download(url,filename)
+
+msleep <- read.csv("msleep_ggplot2.csv")
+class(msleep)
+
+msleep <- filter(msleep, order == "Primates")
+
+msleep <- dplyr::select(msleep, sleep_total)
+
+msleep <- unlist(msleep)
+
+msleep_1 <- read.csv("msleep_ggplot2.csv") %>% filter(order == "Primates") %>% dplyr::select(sleep_total)
+summarize(msleep_1, mean = mean(msleep_1[,1]))
+
+# 2: Introduction to exploratory data analysis 
+
+
+# 2.1: Histogram
+
+x <- father.son$fheight
+
+round(sample(x,20),1)
+
+# Histogram
+hist(x,breaks=seq(floor(min(x)),ceiling(max(x))),main="Height histogram",xlab="Height in inches")
+
+# Empirical cumulative distribution function
+xs <- seq(floor(min(x)), ceiling(max(x)),0.1)
+plot(xs,ecdf(x)(xs),type="l",xlab="Height in inches",ylab="F(x)")
+
+# 2.2: QQ-plot
+
+ps <- seq(0.01,0.99,0.01)
+qs <- quantile(x,ps)
+normalqs <- qnorm(ps,mean(x),sd(x))
+plot(normalqs,qs,xlab="Normal percentiles",ylab="Height percentiles")
+abline(0,1)
+
+# A shorter way to do that is given by:
+qqnorm(x) # This function plots against a standard normal distribution
+qqline(x)
+
+# 2.3: QQ-plot exercises
+
+load("skew.RData")
+dim(dat)
+
+# In order to compare the distribution of each column to a normal, we can use:
+par(mfrow=c(3,3)) # Sets up a grid for 3x3 plots. 'mfrow' means multifigure grid filled in row-by-row. Another choice is mfcol
+
+for (i in 1:ncol(dat)) {
+  qqnorm(dat[,i])
+  qqline(dat[,i])
+} # The 4th row has a positive skew and the 9th, a negative
+
+# 2.4: Boxplot
+
+hist(exec.pay)
+qqnorm(exec.pay)
+qqline(exec.pay)
+
+boxplot(exec.pay,ylab="10.000s of dollars",ylim=c(0,400))
+
+# 2.5: Boxplot exercises
+
+head(InsectSprays)
+
+# There are two equivalent ways of drawing boxplots in R:
+
+# Using split
+boxplot(split(InsectSprays$count,InsectSprays$spray))
+# Using a formula
+boxplot(InsectSprays$count~InsectSprays$spray)
+
+data(nym.2002,package="UsingR")
+
+hist(nym.2002$time[nym.2002$gender=="Male"])
+hist(nym.2002$time[nym.2002$gender=="Female"])
+
+boxplot(nym.2002$time~nym.2002$gender)
+boxplot(nym.2002$time~nym.2002$home)
+
+### Week 1 quiz ###
+
+library(dslabs)
+library(dplyr)
+data("heights")
+h<-heights$height
+hist(h)
+
+# 3: Random variables and probability distributions
+
+# 3.1: Motivation
+
+dat <- read.csv("femaleMiceWeights.csv")
+control <- filter(dat,Diet=="chow") %>% dplyr::select(Bodyweight) %>% unlist
+treatment <- filter(dat,Diet=="hf") %>% dplyr::select(Bodyweight) %>% unlist
+mean(control)
+mean(treatment)
+
+# 3.2: Introduction to random variables
+
+population <- read.csv("femaleControlsPopulation.csv")
+population <-unlist(population)
+
+mean(sample(population,12))
+
+# 3.3: Random variables exercises
+
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleControlsPopulation.csv"
+filename <- basename(url)
+download(url, destfile=filename)
+x <- unlist(read.csv(filename))
+
+mean(x)
+set.seed(1)
+sample(x,5)
+abs(mean(sample(x,5))-mean(x))
+
+set.seed(5)
+abs(mean(sample(x,5))-mean(x))
+
+# 3.4: Introduction to null distributions
+
+obs <- mean(treatment)-mean(control)
+
+# Under the H0, both groups come from the same population
+
+control <- sample(population,12)
+treatment <- sample(population,12)
+
+mean(treatment)-mean(control)
+
+# The null distribution is basically all possible realizations under the null hypothesis
+
+n <- 10000
+nulls <- vector("numeric",n)
+for(i in 1:n){
+  control <- sample(population,12)
+  treatment <- sample(population,12)
+  nulls[i] <- mean(treatment)-mean(control)
+}
+
+max(nulls)
+hist(nulls)
+
+# The p-value answers the question:
+# What is the probability that an outcome from the null distribution is greater than what we observed?
+mean(abs(nulls)>obs)
+
+# 3.5: Null distributions exercises
+
+set.seed(1)
+n <- 10000
+nulls <- vector("numeric",n)
+for(i in 1:n){
+  nulls[i] <- mean(sample(population,5))-mean(x)
+}
+mean(abs(nulls)>1)
+
+# 3.6: Probability distributions exercises
+
+data(gapminder,package="gapminder")
+
+x <- gapminder$lifeExp[gapminder$year==1952]
+hist(x)
+
+a <- 40
+mean(x<=a)
+
+# Two equivalent ways of plotting the proportions of countries with life expectancy q for a range of different years
+
+# The first one is
+plot(ecdf(x))
+
+# The second one is
+prop=function(q){
+  mean(x<=q)
+}
+qs <- seq(from=min(x),to=max(x),length=20) # Building a range of qs that we can apply the function to
+props <- sapply(qs,prop)
+plot(qs,props)
+
+# We could also have written the same code in one line, without naming the function, that is, with an inline, or anonymous, function
+
+plot(seq(from=min(x),to=max(x),length=20),sapply(seq(from=min(x),to=max(x),length=20), function(q) mean(x <= q)))
+
+# 4: Central limit theorem 
+
+# 4.1: The normal distribution exercises
+
+library(downloader) 
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleControlsPopulation.csv"
+filename <- basename(url)
+download(url, destfile=filename)
+x <- unlist( read.csv(filename) )
+
+# Make averages5
+set.seed(1)
+n <- 1000
+averages5 <- vector("numeric",n)
+for(i in 1:n){
+  X <- sample(x,5)
+  averages5[i] <- mean(X)
+}
+
+# Make averages50
+set.seed(1)
+n <- 1000
+averages50 <- vector("numeric",n)
+for(i in 1:n){
+  X <- sample(x,50)
+  averages50[i] <- mean(X)
+}
+
+hist(averages5)
+hist(averages50)
+
+ex2 <- averages50[averages50>=23]
+ex2 <- ex2[ex2<=25]
+length(ex2)/length(averages50)
+# We can do the same thing by:
+pnorm(25,23.9,0.43) - pnorm(23,23.9,0.43)
+
+# 4.2: Population, samples, and estimates exercises 
+
+library(downloader) 
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/mice_pheno.csv"
+filename <- basename(url)
+download(url, destfile=filename)
+dat <- read.csv(filename) 
+dat <- na.omit(dat)
+
+library(dplyr)
+x <- dat %>% filter(Diet=="chow") %>% filter(Sex=="M")
+x <- x$Bodyweight
+mean(x)
+
+library(rafalib)
+popsd(x)
+
+set.seed(1)
+mean(sample(x,25))
+
+y <- dat$Bodyweight[dat$Sex=="M"&dat$Diet=="hf"]
+mean(y)
+
+popsd(y)
+
+set.seed(1)
+mean(sample(y,25))
+
+set.seed(1)
+(mean(sample(y,25))-mean(sample(x,25)))-(mean(y)-mean(x))
+
+x <- dat$Bodyweight[dat$Sex=="F"&dat$Diet=="chow"]
+set.seed(2)
+X <- sample(x,25)
+y<- dat$Bodyweight[dat$Sex=="F"&dat$Diet=="hf"]
+set.seed(2)
+Y <- sample(y,25)
+(mean(y)-mean(x))-(mean(Y)-mean(X))
+
+# 4.3: Central limit theorem exercises
+
+library(downloader) 
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/mice_pheno.csv"
+filename <- basename(url)
+download(url, destfile=filename)
+dat <- na.omit(read.csv(filename))
+
+pnorm(1)-pnorm(-1)
+
+pnorm(2)-pnorm(-2)
+
+pnorm(3)-pnorm(-3)
+
+y <- dat$Bodyweight[dat$Sex=="M"&dat$Diet=="chow"]
+mean(mean(y)-popsd(y)<y&mean(y)+popsd(y)>y)
+
+mean(mean(y)-2*popsd(y)<y&mean(y)+2*popsd(y)>y)
+
+mean(mean(y)-3*popsd(y)<y&mean(y)+3*popsd(y)>y)
+
+qqnorm(y)
+qqline(y)
+
+y <- filter(dat, Sex=="M" & Diet=="chow") %>% select(Bodyweight) %>% unlist
+set.seed(1)
+avgs <- replicate(10000, mean(sample(y, 25)))
+mypar(1,2)
+hist(avgs)
+qqnorm(avgs)
+qqline(avgs)
+
+mean(avgs)
+
+popsd(avgs)
+
+# 4.4: T-test
+
+library(dplyr)
+dat <- read.csv("femaleMiceWeights.csv")
+control <- filter(dat,Diet=="chow") %>% select(Bodyweight) %>% unlist
+treatment <- filter(dat,Diet=="hf") %>% select(Bodyweight) %>% unlist
+N <- length(treatment)
+obs <- mean(treatment)-mean(control)
+
+se <- sqrt(var(treatment)/N+var(control)/N)
+tstat <- obs/se
+# The p-value is given by:
+2*(1-pnorm(tstat))
+
+# Acting as if we have access to the population data
+n <- 10000
+nulls <- vector("numeric",n)
+for(i in 1:n){
+  control <- sample(population,N)
+  treatment <- sample(population,N)
+  se <- sqrt(var(treatment)/N+var(control)/N)
+  nulls[i] <- (mean(treatment)-mean(control))/se
+}
+library(rafalib)
+mypar()
+qqnorm(nulls)
+qqline(nulls)
+
+M <- 3
+for(i in 1:n){
+  control <- sample(population,M)
+  treatment <- sample(population,M)
+  se <- sqrt(var(treatment)/M+var(control)/M)
+  nulls[i] <- (mean(treatment)-mean(control))/se
+}
+library(rafalib)
+mypar()
+qqnorm(nulls)
+qqline(nulls)
+
+# 4.5: T-test in practice
+
+library(dplyr)
+dat <- read.csv("femaleMiceWeights.csv")
+control <- filter(dat,Diet=="chow") %>% select(Bodyweight) %>% unlist
+treatment <- filter(dat,Diet=="hf") %>% select(Bodyweight) %>% unlist
+
+ttest <- t.test(treatment,control)
+identical(tstat,as.numeric(ttest$statistic))
+
+# The p-value is different because, earlier, we have assumed the normal distribution and now we are assuming the t-distribution 
+identical(2*(1-pnorm(tstat)),as.numeric(ttest$p.value))
+
+# 4.6: CLT and t-distribution in practice exercises
+
+library(downloader)
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
+filename <- "femaleMiceWeights.csv"
+if(!file.exists("femaleMiceWeights.csv")) download(url,destfile=filename)
+dat <- read.csv(filename)
+
+n <- 100
+p <-1/6
+set.seed(1)
+x <- sample(1:6,n,replace=T)
+mean(x==6)
+z <- (mean(x==6)-p)/sqrt(p*((1-p)/n))
+set.seed(1)
+mean(abs(replicate(10000,(mean(sample(1:6,n,replace=T)==6) - p) / sqrt(p*(1-p)/n)))>2)
+
+n <- 100
+p <-1/6
+set.seed(1)
+a <- replicate(10000,(mean(sample(1:6,n,replace=T)==6) - p) / sqrt(p*(1-p)/n))
+mean(abs(a)>2)
+hist(a)
+qqnorm(a)
+qqline(a)
+
+X <- filter(dat, Diet=="chow") %>% select(Bodyweight) %>% unlist
+Y <- filter(dat, Diet=="hf") %>% select(Bodyweight) %>% unlist
+mean(X)
+
+# Probability that our mean estimate is off by more than 2 grams from the population mean
+2*(1-pnorm(2/(sd(X)/sqrt(12))))
+
+sqrt(var(Y)/12+var(X)/12)
+
+t.test(Y,X)
+(mean(Y)-mean(X))/sqrt(var(Y)/12+var(X)/12)
+
+1 - pt(3,df=3)
+1 - pt(3,df=15)
+1 - pt(3,df=30)
+1 - pnorm(3)
+
+2*(1-pnorm(ttest$statistic))
+
+### Week 2 quiz ###
+
+library(downloader) 
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleControlsPopulation.csv"
+filename <- basename(url)
+download(url, destfile=filename)
+x <- unlist( read.csv(filename) )
+N <- 1000
+means <- c()
+set.seed(1)
+for(i in 1:N){
+  means[i] <- mean(sample(x,50)) 
+}
+mean(means>mean(x)+1|means<mean(x)-1)
+# Alternative way of calculating
+mean(abs(means-mean(x))>1)
+
+library(gapminder)
+data(gapminder)
+# Proportion of countries in 1952 that have a life expectancy between 40 and 60 years
+mean(gapminder$lifeExp[gapminder$year==1952]>=40 & gapminder$lifeExp[gapminder$year==1952]<=60)
+
+# 5: Inference I: p-values, confidence intervals and power calculation 
+
+# 5.1: T-test exercises
+
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/babies.txt"
+filename <- basename(url)
+download(url, destfile=filename)
+babies <- read.table("babies.txt", header=TRUE)
+bwt.nonsmoke <- filter(babies, smoke==0) %>% select(bwt) %>% unlist 
+bwt.smoke <- filter(babies, smoke==1) %>% select(bwt) %>% unlist
+library(rafalib)
+mean(bwt.nonsmoke)-mean(bwt.smoke)
+popsd(bwt.nonsmoke)
+popsd(bwt.smoke)
+
+set.seed(1)
+dat.ns <- sample(bwt.nonsmoke,25)
+dat.s <- sample(bwt.smoke,25)
+
+tval <- t.test(dat.ns,dat.s)
+
+pval <- 1-(pnorm(abs(as.numeric(tval$statistic)))-pnorm(-abs(as.numeric(tval$statistic))))
+
+# 5.2: Confidence intervals
+
+set.seed(1)
+chowPopulation <- read.csv("femaleControlsPopulation.csv")
+chowPopulation <- unlist(chowPopulation)
+mu_chow <- mean(chowPopulation)
+N <- 30
+chow <- sample(chowPopulation,N)
+mean(chow)
+se <- sd(chow)/sqrt(N)
+(mean(chow)-mean(chowPopulation))/se
+Q <- qnorm(1-0.05/2)
+# The interval -Q<(mean(chow)-mean(chowPopulation))/se<Q is going to be on top of the population mean 95% of the time
+interval <- c(mean(chow)-Q*se,mean(chow)+Q*se)
+# Since, in this example, we know the population mean, we can check whether, in fact, the population mean is in this interval
+interval[1]<mu_chow&interval[2]>mu_chow
+
+library(rafalib)
+B <- 250
+mypar()
+plot(mean(chowPopulation)+c(-7,7),c(1,1),type="n",xlab="weight",ylab="interval",ylim=c(1,B))
+abline(v=mean(chowPopulation))
+for(i in 1:B){
+  chow <- sample(chowPopulation,N)
+  se <- sd(chow)/sqrt(N)
+  interval <- c(mean(chow)-Q*se,mean(chow)+Q*se)
+  covered <- mean(chowPopulation) <= interval[2] & mean(chowPopulation)>=interval[1]
+  color <- ifelse(covered,1,2)
+  lines(interval, c(i,i),col=color)
+}
+
+# Repeating the experiment for N=5
+N <- 5
+mypar()
+plot(mean(chowPopulation)+c(-7,7),c(1,1),type="n",xlab="weight",ylab="interval",ylim=c(1,B))
+abline(v=mean(chowPopulation))
+for(i in 1:B){
+  chow <- sample(chowPopulation,N)
+  se <- sd(chow)/sqrt(N)
+  interval <- c(mean(chow)-Q*se,mean(chow)+Q*se)
+  covered <- mean(chowPopulation) <= interval[2] & mean(chowPopulation)>=interval[1]
+  color <- ifelse(covered,1,2)
+  lines(interval, c(i,i),col=color)
+}
+# N=5 produced more red lines because the Q that we computed isn't right anymore, since it was based in the CLT
+
+# Repeating the same code defining Q using the t distribution approximation
+Q <- qt(1-0.05/2,df=4)
+N <- 5
+mypar()
+plot(mean(chowPopulation)+c(-7,7),c(1,1),type="n",xlab="weight",ylab="interval",ylim=c(1,B))
+abline(v=mean(chowPopulation))
+for(i in 1:B){
+  chow <- sample(chowPopulation,N)
+  se <- sd(chow)/sqrt(N)
+  interval <- c(mean(chow)-Q*se,mean(chow)+Q*se)
+  covered <- mean(chowPopulation) <= interval[2] & mean(chowPopulation)>=interval[1]
+  color <- ifelse(covered,1,2)
+  lines(interval, c(i,i),col=color)
+}
+
+# 5.3: Confidence intervals exercises
+
+library(downloader)
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/babies.txt"
+filename <- basename(url)
+download(url, destfile=filename)
+babies <- read.table("babies.txt", header=TRUE)
+library(dplyr)
+bwt.nonsmoke <- filter(babies, smoke==0) %>% select(bwt) %>% unlist 
+bwt.smoke <- filter(babies, smoke==1) %>% select(bwt) %>% unlist
+library(rafalib)
+mean(bwt.nonsmoke)-mean(bwt.smoke)
+popsd(bwt.nonsmoke)
+popsd(bwt.smoke)
+
+N <- 25
+set.seed(1)
+dat.ns <-sample(bwt.nonsmoke,N)
+dat.s <- sample(bwt.smoke,N)
+qt(0.995,48)*sqrt(sd(dat.ns)^2/N+sd(dat.s)^2/N)
+
+N <- 5
+set.seed(1)
+a <- sample(dat.s,N)
+b <- sample(dat.ns,N)
+t.test(b,a)
+
+# 5.4: Power calculations
+
+library(dplyr)
+dat <- read.csv("mice_pheno.csv")
+controlPopulation <- filter(dat,Sex=="F"&Diet=="chow") %>% select(Bodyweight) %>% unlist
+hfPopulation <- filter(dat,Sex=="F"&Diet=="hf") %>% select(Bodyweight) %>% unlist
+mu_hf <- mean(hfPopulation)
+mu_control <- mean(controlPopulation)
+mu_hf-mu_control # Absolute difference
+(mu_hf-mu_control)/mu_control*100 # Percent change
+
+set.seed(1)
+N <- 5
+hf <- sample(hfPopulation,N)
+control <- sample(controlPopulation,N)
+t.test(hf,control)$p.value # Type II error
+
+N <- 12
+hf <- sample(hfPopulation,N)
+control <- sample(controlPopulation,N)
+t.test(hf,control)$p.value
+
+alpha <- 0.05
+
+B <- 2000
+
+reject <- function(N,alpha=0.05){
+  hf <- sample(hfPopulation,N)
+  control <- sample(controlPopulation,N)
+  pval <- t.test(hf,control)$p.value
+  pval<alpha 
+}
+rejections <- replicate(B,reject(N))
+mean(rejections) # This is power, the probability of rejecting the null hypothesis when the alternative is true
+
+Ns <- seq(5,50,5)
+power <- sapply(Ns,function(N){
+  rejections <- replicate(B,reject(N))
+  mean(rejections)
+})
+plot(Ns,power,type="b")
+
+# 5.5: Power calculations exercises
+
+library(downloader)
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/babies.txt"
+filename <- basename(url)
+download(url, destfile=filename)
+babies <- read.table("babies.txt", header=TRUE)
+library(dplyr)
+bwt.nonsmoke <- filter(babies, smoke==0) %>% select(bwt) %>% unlist 
+bwt.smoke <- filter(babies, smoke==1) %>% select(bwt) %>% unlist
+library(rafalib)
+mean(bwt.nonsmoke)-mean(bwt.smoke)
+popsd(bwt.nonsmoke)
+popsd(bwt.smoke)
+
+set.seed(1)
+dat.s <- sample(bwt.smoke,5)
+dat.ns <- sample(bwt.nonsmoke,5)
+t.test(dat.s,dat.ns)$p.value
+
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,5),sample(bwt.nonsmoke,5))$p.value)
+mean(pvals<0.05)
+
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,30),sample(bwt.nonsmoke,30))$p.value)
+mean(pvals<0.05)
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,60),sample(bwt.nonsmoke,60))$p.value)
+mean(pvals<0.05)
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,90),sample(bwt.nonsmoke,90))$p.value)
+mean(pvals<0.05)
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,5),sample(bwt.nonsmoke,5))$p.value)
+mean(pvals<0.05)
+
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,30),sample(bwt.nonsmoke,30))$p.value)
+mean(pvals<0.01)
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,60),sample(bwt.nonsmoke,60))$p.value)
+mean(pvals<0.01)
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,90),sample(bwt.nonsmoke,90))$p.value)
+mean(pvals<0.01)
+set.seed(1)
+pvals <- replicate(10000,t.test(sample(bwt.smoke,5),sample(bwt.nonsmoke,5))$p.value)
+mean(pvals<0.01)
+
+# Monte Carlo simulation, permutation tests and association tests 
+
+# 6.1: Monte Carlo simulation
+
+set.seed(1)
+dat <- read.csv("mice_pheno.csv")
+controlPopulation <- read.csv("femaleControlsPopulation.csv")
+controlPopulation <- unlist(controlPopulation)
+ttestgenerator <- function(n){
+  # Note that here we have a false "high fat" group where we actually sample from nonsmokers
+  # This is because we are modeling the null
+  cases <- sample(controlPopulation,n)
+  controls <- sample(controlPopulation,n)
+  tstat <- (mean(cases)-mean(controls))/sqrt(var(cases)/n+var(controls)/n)
+  return(tstat)
+}
+ttests <- replicate (1000,ttestgenerator(10))
+hist(ttests)
+qqnorm(ttests)
+abline(0,1)
+
+ttests <- replicate (1000,ttestgenerator(3))
+hist(ttests)
+qqnorm(ttests)
+abline(0,1)
+
+ps <- (seq(0,999)+0.5)/100
+qqplot(qt(ps,df=2*3-2),ttests,xlim=c(-6,6),ylim=c(-6,6))
+abline(0,1)
+
+qqnorm(controlPopulation)
+qqline(controlPopulation)
+
+controls <- rnorm(5000,mean=24,sd=3.5)
+
+ttestgenerator <- function(n,mean=24,sd=3.5){
+  cases <- rnorm(n,mean,sd)
+  controls <-rnorm(n,mean,sd)
+  tstat <- (mean(cases)-mean(controls))/sqrt(var(cases)/n+var(controls)/n)
+  return(tstat)
+}
+
+ttests <- replicate(1000,ttestgenerator(3))
+qqnorm(ttests)
+abline(0,1)
+
+ps <- (seq(0,999)+0.5)/100
+qqplot(qt(ps,df=2*3-2),ttests,xlim=c(-6,6),ylim=c(-6,6))
+abline(0,1)
+
+# 6.2: Monte Carlo Exercises
+
+set.seed(1)
+x <- rnorm(5)
+t <- sqrt(5)*mean(x)/sd(x)
+
+set.seed(1)
+B <- 1000
+ts <- c()
+for(i in 1:B){
+  x <- rnorm(5)
+  ts[i] <- sqrt(5)*mean(x)/sd(x)
+}
+1-pt(2,df=4)
+
+B <- 100
+ps <- seq(1/(B+1),1-1/(B+1),len=B)
+qt(ps,df=4)
+qqplot(qt(ps,df=4),ts)
+
+library(rafalib)
+mypar(3,2)
+Ns<-seq(5,30,5)
+B <- 1000
+mypar(3,2)
+LIM <- c(-4.5,4.5)
+for(N in Ns){
+  ts <- replicate(B, {
+    X <- rnorm(N)
+    sqrt(N)*mean(X)/sd(X)
+  })
+  ps <- seq(1/(B+1),1-1/(B+1),len=B)
+  qqplot(qt(ps,df=N-1),ts,main=N,
+         xlab="Theoretical",ylab="Observed",
+         xlim=LIM, ylim=LIM)
+  abline(0,1)
+} 
+
+set.seed(1)
+N <- 15
+B <- 10000
+tstats <- replicate(B,{
+  X <- sample(c(-1,1), N, replace=TRUE)
+  sqrt(N)*mean(X)/sd(X)
+})
+ps=seq(1/(B+1), 1-1/(B+1), len=B) 
+qqplot(qt(ps,N-1), tstats, xlim=range(tstats))
+abline(0,1)
+# The population data is not normal thus the theory does not apply.
+# We check with a Monte Carlo simulation. The qqplot shows a large tail. 
+# Note that there is a small but positive chance that all the X are the same.
+# In this case the denominator is 0 and the t-statistics is not defined
+
+set.seed(1)
+N <- 1000
+B <- 10000
+tstats <- replicate(B,{
+  X <-  sample(c(-1,1), N, replace=TRUE)
+  sqrt(N)*mean(X)/sd(X)
+})
+qqnorm(tstats)
+abline(0,1)
+# With N=1000, CLT kicks in and the t-statistic is approximated with normal 0,1
+# Furthermore, t-distribution with df=999 and normal are practically the same.
+
+set.seed(1)
+Ns <- seq(5,45,5)
+library(rafalib)
+mypar(3,3)
+for(N in Ns){
+  medians <- replicate(10000, median ( rnorm(N) ) )
+  title <- paste("N=",N,", avg=",round( mean(medians), 2) , ", sd*sqrt(N)=", round( sd(medians)*sqrt(N),2) )
+  qqnorm(medians, main = title )
+  qqline(medians)
+}
+# There is an asymptotic result that says SD is sqrt(N*4*dnorm(0)^2)
+
+# 6.3: Permutations exercises
+
+library(downloader)
+library(dplyr)
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/babies.txt"
+filename <- basename(url)
+download(url, destfile=filename)
+babies <- read.table("babies.txt", header=TRUE)
+bwt.nonsmoke <- filter(babies, smoke==0) %>% select(bwt) %>% unlist 
+bwt.smoke <- filter(babies, smoke==1) %>% select(bwt) %>% unlist
+N=10
+set.seed(1)
+nonsmokers <- sample(bwt.nonsmoke , N)
+smokers <- sample(bwt.smoke , N)
+obs <- mean(smokers) - mean(nonsmokers)
+dat <- c(smokers,nonsmokers)
+shuffle <- sample( dat )
+smokersstar <- shuffle[1:N]
+nonsmokersstar <- shuffle[(N+1):(2*N)]
+mean(smokersstar)-mean(nonsmokersstar)
+
+set.seed(1)
+null <- replicate(1000, {
+  shuffle <- sample( dat )
+  smokersstar <- shuffle[1:N]
+  nonsmokersstar <- shuffle[(N+1):(2*N)]
+  mean(smokersstar)-mean(nonsmokersstar)
+})
+(sum(abs(null) >= abs(obs)) +1 ) / ( length(null)+1) 
+
+obs <- median(smokers)-median(nonsmokers)
+set.seed(1)
+null <- replicate(1000, {
+  shuffle <- sample( dat )
+  smokersstar <- shuffle[1:N]
+  nonsmokersstar <- shuffle[(N+1):(2*N)]
+  median(smokersstar)-median(nonsmokersstar)
+})
+(sum(abs(null) >= abs(obs)) +1 ) / ( length(null)+1) 
+
+# 6.4: Association tests exercises
+
+d = read.csv("assoctest.csv")
+table(d)
+chisq.test(d$allele,d$case)
+
+fisher.test(d$allele,d$case)
+
+### Week 3 quiz ###
+
+pval <- 1-(pnorm(abs(tval))-pnorm(-abs(tval)))
+
+# 7: Exploratory data analysis
+
+# 7.1: Scatterplot
+
+data("father.son")
+x <- father.son$fheight
+y <- father.son$sheight
+plot(x,y,xlab="Father's height in inches",ylab="Son's height in inches",main=paste("correlation =",signif(cor(x,y),2)))
+
+# Stratifying the data
+boxplot(split(y,round(x)))
+mean(y[round(x)==72])
+
+x <- (x-mean(x))/sd(x)
+y <- (y-mean(y))/sd(y)
+means <- tapply(y,round(x*4)/4,mean)
+fatherheights <- as.numeric(names(means))
+plot(fatherheights,means,ylab="Average of strata of son heights",ylim=range(fatherheights))
+abline(0,cor(x,y))
+
+# We need to be careful with the correlation value
+set.seed(1)
+a <- rnorm(100);a[1]=25
+b <- rnorm(100);b[1]=26
+plot(a,b,main=paste("correlation =",signif(cor(a,b),2)))
+
+# 7.2: Scatterplot exercises
+
+data(nym.2002, package="UsingR")
+library(dplyr)
+males <- nym.2002 %>% filter(gender=="Male")
+females <- nym.2002 %>% filter(gender=="Female")
+cor(males$age,males$time)
+
+cor(females$age,females$time)
+
+males_time <- males %>% dplyr::select(time) %>% unlist
+males_age <- males %>% dplyr::select(age) %>% unlist
+females_time <- females %>% dplyr::select(time) %>% unlist
+females_age <- females %>% dplyr::select(age) %>% unlist
+
+plot(males_time,males_age)
+plot(females_time,females_age)
+
+boxplot(split(males_time,males_age[males_age]))
+
+# 7.3: Symmetry of log ratios exercises
+
+time = sort(nym.2002$time)
+min(time)/median(time)
+
+max(time)/median(time)
+
+# 7.4: Plots to avoid exercises
+
+library(dslabs)
+data("divorce_margarine")
+plot(divorce_margarine$margarine_consumption_per_capita, divorce_margarine$divorce_rate_maine)
+cor(divorce_margarine$margarine_consumption_per_capita, divorce_margarine$divorce_rate_maine)
+
+
+# 8: Robust summaries 
+
+# 8.1: Median, MAD, and Spearman correlation exercises
+
+data("ChickWeight")
+head(ChickWeight)
+plot(ChickWeight$Time, ChickWeight$weight, col=ChickWeight$Diet)
+
+# To facilitate the comparison of weights at different time points and across the different chicks, we will reshape the data so that each row is a chick
+chick = reshape(ChickWeight, idvar=c("Chick","Diet"), timevar="Time",
+                direction="wide")
+chick = na.omit(chick)
+weight4 <- c(weight4,c(3000))
+mean(weight4)/mean(chick$weight.4)
+
+median(weight4)/median(chick$weight.4)
+
+sd(weight4)/sd(chick$weight.4)
+
+mad(weight4)/mad(chick$weight.4)
+
+plot(chick$weight.4,chick$weight.21)
+
+cor(chick$weight.4,chick$weight.21,method="spearman")
+
+weight5_4 <- c(chick$weight.4,3000)
+weight5_21 <- c(chick$weight.21,3000)
+
+cor(weight5_21,weight5_4)/cor(chick$weight.4,chick$weight.21)
+
+# 8.2: Mann-Whitney-Wilcoxon test exercises
+
+x <- chick$weight.4[chick$Diet==1]
+y <- chick$weight.4[chick$Diet==4]
+t.test(x,y)
+wilcox.test(x,y)
+
+x1 <- c(x,200)
+t.test(x1,y)$p.value
+
+wilcox.test(x1,y)
+
+library(rafalib)
+mypar(1,3)
+boxplot(x,y)
+boxplot(x,y+10)
+boxplot(x,y+100)
+
+t.test(x,y+10)$statistic - t.test(x,y+100)$statistic
+
+### Week 4 quiz ###
+
+wilcox.test(c(1,2,3),c(4,5,6))
+
+wilcox.test(c(1,2,3),c(400,500,600))
+
+time <- sort(nym.2002$time)
+plot(time/median(time), ylim=c(1/4,4))
+abline(h=c(1/2,1,2))
+plot(log2(time/median(time)),ylim=c(-2,2))
+abline(h=-1:1)
